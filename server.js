@@ -88,7 +88,7 @@ app.get('/api/metrics', async (req, res) => {
     }
   } catch (err) {
     console.error('Error fetching metrics:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -102,7 +102,8 @@ app.get('/api/products', async (req, res) => {
     const products = result.records.map(r => r.get('p').properties);
     res.json(products);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching products:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -116,7 +117,8 @@ app.get('/api/suppliers', async (req, res) => {
     const suppliers = result.records.map(r => r.get('s').properties);
     res.json(suppliers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching suppliers:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -130,7 +132,8 @@ app.get('/api/facilities', async (req, res) => {
     const facilities = result.records.map(r => r.get('f').properties);
     res.json(facilities);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching facilities:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -161,7 +164,8 @@ app.get('/api/bom/:sku', async (req, res) => {
     });
     res.json(bomItems);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching BOM details:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -375,7 +379,7 @@ app.post('/api/simulate', async (req, res) => {
     });
   } catch (err) {
     console.error('Error running disruption simulation:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -495,7 +499,8 @@ app.get('/api/graph/product/:sku', async (req, res) => {
       edges: Array.from(edgesMap.values())
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching product graph data:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }
@@ -568,7 +573,8 @@ app.get('/api/graph/disruption/:type/:id', async (req, res) => {
       edgeIds: Array.from(affectedEdgeIds)
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching graph disruption highlights:', err);
+    res.status(500).json({ error: 'Internal server error' });
   } finally {
     await session.close();
   }

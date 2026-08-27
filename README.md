@@ -6,9 +6,9 @@ ChainGuard is a graph-backed supply chain traceability and risk analysis control
 
 ## 1. Overview
 
-Global supply chains are multi-tiered and highly interdependent. A disruption at a Tier-3 sub-component supplier (e.g., semiconductor chip plants or capacitor fabs) can ripple upwards, halting the assembly of Tier-1 sub-assemblies and eventually delaying final products. 
+Global supply chains are multi-tiered and highly interdependent. A disruption at a Tier-3 sub-component supplier (e.g., semiconductor chip facilities or capacitor fabs) can ripple upwards, halting the assembly of Tier-1 sub-assemblies and eventually delaying final products. 
 
-ChainGuard solves this transparency issue by mapping the entire supply chain network as a graph. It allows supply chain managers to trace components from raw materials to consumer products, simulate the disruption of any supplier or facility, calculate the distinct **Monthly Revenue at Risk**, and instantly identify qualified alternative vendors.
+ChainGuard solves this transparency issue by mapping the entire supply chain network as a graph. It allows supply chain managers to trace components from raw materials to consumer products, simulate the disruption of any supplier or facility, calculate the distinct **Monthly Revenue at Risk**, and instantly identify qualified alternative suppliers.
 
 ---
 
@@ -48,15 +48,15 @@ graph TD
     *   Properties: `sku` (string, unique ID), `name` (string), `category` (string), `price` (float), `monthlyDemand` (int)
 *   **`Component`**: Represents raw materials, chips, or intermediate assemblies.
     *   Properties: `id` (string, unique ID), `name` (string), `category` (string), `cost` (float)
-*   **`Supplier`**: Represents vendors supplying components or operating plants.
+*   **`Supplier`**: Represents suppliers supplying components or operating facilities.
     *   Properties: `id` (string, unique ID), `name` (string), `country` (string), `riskRating` (string: `"LOW"`, `"MEDIUM"`, `"HIGH"`)
-*   **`Facility`**: Represents physical manufacturing or processing plants.
+*   **`Facility`**: Represents physical manufacturing or processing facilities.
     *   Properties: `id` (string, unique ID), `name` (string), `city` (string), `country` (string), `riskRating` (string: `"LOW"`, `"MEDIUM"`, `"HIGH"`)
 
 ### Relationship Schema
 *   `(:Supplier)-[:OPERATES]->(:Facility)`: A supplier owns/operates a facility.
 *   `(:Supplier)-[:SUPPLIES { price: Float, leadTimeDays: Int, capacity: Int }]->(:Component)`: A supplier provides a component under specific pricing, lead time, and capacity constraints.
-*   `(:Component)-[:PRODUCED_AT]->(:Facility)`: A component is manufactured at a specific plant.
+*   `(:Component)-[:PRODUCED_AT]->(:Facility)`: A component is manufactured at a specific facility.
 *   `(:Component)-[:USED_IN { quantity: Float }]->(:Component)`: A sub-component goes into an intermediate assembly.
 *   `(:Component)-[:USED_IN { quantity: Float }]->(:Product)`: A component goes directly into a finished product.
 

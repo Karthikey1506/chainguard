@@ -178,12 +178,23 @@ const getRequiredComponentVolume = async (session, componentId) => {
     RETURN p.sku as productSku, p.monthlyDemand as monthlyDemand, [r IN relationships(path) | r.quantity] as quantities
   `;
   const res = await session.run(q, { componentId });
-  let totalVolume = 0;
+  const productQuantities = new Map();
+  
   res.records.forEach(r => {
+    const sku = r.get('productSku');
     const demand = r.get('monthlyDemand').toNumber ? r.get('monthlyDemand').toNumber() : r.get('monthlyDemand');
     const quantities = r.get('quantities').map(q => parseFloat(q));
     const multiplier = quantities.reduce((a, b) => a * b, 1);
-    totalVolume += demand * multiplier;
+    
+    if (!productQuantities.has(sku)) {
+      productQuantities.set(sku, { demand, multiplierSum: 0 });
+    }
+    productQuantities.get(sku).multiplierSum += multiplier;
+  });
+
+  let totalVolume = 0;
+  productQuantities.forEach(p => {
+    totalVolume += p.demand * p.multiplierSum;
   });
   return totalVolume;
 };
@@ -293,7 +304,7 @@ app.post('/api/simulate', async (req, res) => {
       const facResult = await session.run(`
         MATCH (c:Component)-[:PRODUCED_AT]->(f:Facility)
         WHERE c.name IN $componentNames
-        RETURN count(f) as total, sum(case when f.riskRating = 'HIGH' then 1 else 0 end) as highRisk
+        RETURN count(DISTINCT f) as total, count(DISTINCT case when f.riskRating = 'HIGH' then f end) as highRisk
       `, { componentNames: affectedComponentsList });
       if (facResult.records.length > 0) {
         affectedFacilitiesCount = facResult.records[0].get('total').toNumber();

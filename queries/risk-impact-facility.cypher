@@ -1,9 +1,10 @@
 MATCH (f:Facility {id: $facilityId})
 MATCH (c:Component)-[:PRODUCED_AT]->(f)
 MATCH path = (c)-[:USED_IN*0..5]->(p:Product)
-WITH p, path, [n IN nodes(path) WHERE n:Component | n.name] as pathComponents, f
-UNWIND pathComponents as compName
-WITH p, min(length(path)) as pathDepth, collect(distinct compName) as affectedComponents, f
+WITH p, min(length(path)) as pathDepth, collect(distinct [n IN nodes(path) WHERE n:Component | n.name]) as componentGroups, f
+UNWIND componentGroups as group
+UNWIND group as componentName
+WITH p, pathDepth, collect(distinct componentName) as affectedComponents, f
 RETURN 
     p.sku as sku, 
     p.name as name, 

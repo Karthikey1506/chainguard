@@ -37,10 +37,10 @@ graph TD
     Product["Product (sku, name, category, price, monthlyDemand)"]
 
     Supplier -->|OPERATES| Facility
-    Supplier -->|SUPPLIES {price, leadTimeDays, capacity}| Component
+    Supplier -->|SUPPLIES (price, leadTimeDays, capacity)| Component
     Component -->|PRODUCED_AT| Facility
-    Component -->|USED_IN {quantity}| Component
-    Component -->|USED_IN {quantity}| Product
+    Component -->|USED_IN (quantity)| Component
+    Component -->|USED_IN (quantity)| Product
 ```
 
 ### Node Schema

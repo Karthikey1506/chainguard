@@ -31,16 +31,16 @@ The database represents a multi-tiered electronics manufacturing supply chain:
 
 ```mermaid
 graph TD
-    Supplier["Supplier (id, name, country, riskRating)"]
-    Facility["Facility (id, name, city, country, riskRating)"]
-    Component["Component (id, name, category, cost)"]
-    Product["Product (sku, name, category, price, monthlyDemand)"]
+    Supplier[Supplier]
+    Facility[Facility]
+    Component[Component]
+    Product[Product]
 
     Supplier -->|OPERATES| Facility
-    Supplier -->|SUPPLIES price, leadTimeDays, capacity| Component
+    Supplier -->|SUPPLIES| Component
     Component -->|PRODUCED_AT| Facility
-    Component -->|USED_IN quantity| Component
-    Component -->|USED_IN quantity| Product
+    Component -->|USED_IN| Component
+    Component -->|USED_IN| Product
 ```
 
 ### Node Schema

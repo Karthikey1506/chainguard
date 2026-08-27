@@ -175,26 +175,17 @@ app.get('/api/bom/:sku', async (req, res) => {
 const getRequiredComponentVolume = async (session, componentId) => {
   const q = `
     MATCH path = (c:Component {id: $componentId})-[:USED_IN*1..5]->(p:Product)
-    RETURN p.sku as productSku, p.monthlyDemand as monthlyDemand, [r IN relationships(path) | r.quantity] as quantities
+    WITH p, reduce(qty = 1.0, r IN relationships(path) | qty * toFloat(r.quantity)) as pathMultiplier
+    WITH p, sum(pathMultiplier) as totalMultiplier
+    RETURN p.sku as productSku, p.monthlyDemand as monthlyDemand, totalMultiplier
   `;
   const res = await session.run(q, { componentId });
-  const productQuantities = new Map();
+  let totalVolume = 0;
   
   res.records.forEach(r => {
-    const sku = r.get('productSku');
     const demand = r.get('monthlyDemand').toNumber ? r.get('monthlyDemand').toNumber() : r.get('monthlyDemand');
-    const quantities = r.get('quantities').map(q => parseFloat(q));
-    const multiplier = quantities.reduce((a, b) => a * b, 1);
-    
-    if (!productQuantities.has(sku)) {
-      productQuantities.set(sku, { demand, multiplierSum: 0 });
-    }
-    productQuantities.get(sku).multiplierSum += multiplier;
-  });
-
-  let totalVolume = 0;
-  productQuantities.forEach(p => {
-    totalVolume += p.demand * p.multiplierSum;
+    const totalMultiplier = r.get('totalMultiplier');
+    totalVolume += demand * totalMultiplier;
   });
   return totalVolume;
 };

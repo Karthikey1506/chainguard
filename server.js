@@ -235,6 +235,7 @@ app.post('/api/simulate', async (req, res) => {
   const session = driver.session();
   try {
     let name = '';
+    let facilityRiskRating = '';
     let dbProducts = [];
     
     // Get Disruption Source Name
@@ -253,8 +254,11 @@ app.post('/api/simulate', async (req, res) => {
         pathDepth: r.get('pathDepth').toNumber ? r.get('pathDepth').toNumber() : r.get('pathDepth')
       }));
     } else if (type === 'FACILITY') {
-      const fResult = await session.run('MATCH (f:Facility {id: $id}) RETURN f.name as name', { id });
-      if (fResult.records.length > 0) name = fResult.records[0].get('name');
+      const fResult = await session.run('MATCH (f:Facility {id: $id}) RETURN f.name as name, f.riskRating as riskRating', { id });
+      if (fResult.records.length > 0) {
+        name = fResult.records[0].get('name');
+        facilityRiskRating = fResult.records[0].get('riskRating');
+      }
       
       const impactResult = await session.run(queryRiskFacility, { facilityId: id });
       dbProducts = impactResult.records.map(r => ({
@@ -358,7 +362,7 @@ app.post('/api/simulate', async (req, res) => {
         affectedComponents: affectedComponentsList.length,
         affectedProducts: uniqueProducts.length,
         affectedFacilities: affectedFacilitiesCount + (type === 'FACILITY' ? 1 : 0),
-        highRiskFacilities: highRiskFacilitiesCount + (type === 'FACILITY' && riskSeverity === 'HIGH' ? 1 : 0),
+        highRiskFacilities: highRiskFacilitiesCount + (type === 'FACILITY' && facilityRiskRating === 'HIGH' ? 1 : 0),
         monthlyRevenueAtRisk,
         riskSeverity
       },

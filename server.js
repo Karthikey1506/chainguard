@@ -361,8 +361,8 @@ app.post('/api/simulate', async (req, res) => {
       metrics: {
         affectedComponents: affectedComponentsList.length,
         affectedProducts: uniqueProducts.length,
-        affectedFacilities: affectedFacilitiesCount + (type === 'FACILITY' ? 1 : 0),
-        highRiskFacilities: highRiskFacilitiesCount + (type === 'FACILITY' && facilityRiskRating === 'HIGH' ? 1 : 0),
+        affectedFacilities: affectedFacilitiesCount,
+        highRiskFacilities: highRiskFacilitiesCount,
         monthlyRevenueAtRisk,
         riskSeverity
       },

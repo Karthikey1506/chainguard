@@ -60,6 +60,13 @@ graph TD
 *   `(:Component)-[:USED_IN { quantity: Float }]->(:Component)`: A sub-component goes into an intermediate assembly.
 *   `(:Component)-[:USED_IN { quantity: Float }]->(:Product)`: A component goes directly into a finished product.
 
+### Schema Uniqueness Constraints
+To enforce data integrity, the following uniqueness constraints are automatically created on database startup by `seed.js`:
+*   **`product_sku`**: Enforces that `Product.sku` is unique.
+*   **`component_id`**: Enforces that `Component.id` is unique.
+*   **`supplier_id`**: Enforces that `Supplier.id` is unique.
+*   **`facility_id`**: Enforces that `Facility.id` is unique.
+
 ---
 
 ## 4. Key Cypher Queries

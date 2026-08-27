@@ -15,11 +15,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to CognoDB
-const uri = process.env.COGNODB_URI || 'bolt+s://localhost:7687';
-const username = process.env.COGNODB_USERNAME || 'cognodb';
-const password = process.env.COGNODB_PASSWORD || 'password';
+const { COGNODB_URI, COGNODB_USERNAME, COGNODB_PASSWORD } = process.env;
 
-console.log(`Connecting driver to CognoDB at: ${uri}`);
+if (!COGNODB_URI || !COGNODB_USERNAME || !COGNODB_PASSWORD) {
+  throw new Error('Missing CognoDB environment variables in .env file');
+}
+
+const uri = COGNODB_URI;
+const username = COGNODB_USERNAME;
+const password = COGNODB_PASSWORD;
+
+console.log('Connecting driver to CognoDB...');
 const driver = neo4j.driver(uri, neo4j.auth.basic(username, password));
 
 // Verify database connection on startup
@@ -57,15 +63,7 @@ const queryRiskSupplier = loadQuery('risk-impact-supplier.cypher');
 const queryRiskFacility = loadQuery('risk-impact-facility.cypher');
 const queryAlternatives = loadQuery('alternatives.cypher');
 
-// Health Check / Connection Endpoint
-app.get('/api/db-status', async (req, res) => {
-  try {
-    await driver.verifyConnectivity();
-    res.json({ status: 'connected', uri });
-  } catch (err) {
-    res.status(500).json({ status: 'disconnected', error: err.message });
-  }
-});
+
 
 // 1. Dashboard Metrics Endpoint
 app.get('/api/metrics', async (req, res) => {
@@ -292,8 +290,12 @@ app.post('/api/simulate', async (req, res) => {
       }
     }
 
+    // Explicitly deduplicate by SKU as a safety guarantee to ensure no double-counting
+    const uniqueProductsMap = new Map(dbProducts.map(p => [p.sku, p]));
+    const uniqueProducts = Array.from(uniqueProductsMap.values());
+
     // Sum Monthly Revenue at Risk (preventing double-counting by summing unique products)
-    const monthlyRevenueAtRisk = dbProducts.reduce((sum, p) => sum + p.monthlyRevenueAtRisk, 0);
+    const monthlyRevenueAtRisk = uniqueProducts.reduce((sum, p) => sum + p.monthlyRevenueAtRisk, 0);
     const riskSeverity = getRiskSeverity(monthlyRevenueAtRisk);
 
     // Get direct components supplied by this disrupted entity to look up alternatives
@@ -317,48 +319,50 @@ app.post('/api/simulate', async (req, res) => {
       currentSupplierId: type === 'SUPPLIER' ? id : r.get('currentSupplierId')
     }));
 
-    // Find and score alternatives for each direct component
+    // Find and score alternatives for each direct component (only for Supplier disruptions)
     const alternativesData = [];
-    for (const comp of directComponents) {
-      if (!comp.currentSupplierId) continue;
-      
-      const reqVol = await getRequiredComponentVolume(session, comp.id);
-      const altResult = await session.run(queryAlternatives, { 
-        componentId: comp.id, 
-        currentSupplierId: comp.currentSupplierId 
-      });
-      
-      const rawAlts = altResult.records.map(r => ({
-        id: r.get('id'),
-        name: r.get('name'),
-        riskRating: r.get('riskRating'),
-        country: r.get('country'),
-        price: r.get('price').toNumber ? r.get('price').toNumber() : r.get('price'),
-        leadTimeDays: r.get('leadTimeDays').toNumber ? r.get('leadTimeDays').toNumber() : r.get('leadTimeDays'),
-        capacity: r.get('capacity').toNumber ? r.get('capacity').toNumber() : r.get('capacity')
-      }));
-      
-      const scoredAlts = scoreAlternatives(rawAlts, reqVol);
-      
-      alternativesData.push({
-        componentId: comp.id,
-        componentName: comp.name,
-        requiredMonthlyVolume: reqVol,
-        alternatives: scoredAlts
-      });
+    if (type === 'SUPPLIER') {
+      for (const comp of directComponents) {
+        if (!comp.currentSupplierId) continue;
+        
+        const reqVol = await getRequiredComponentVolume(session, comp.id);
+        const altResult = await session.run(queryAlternatives, { 
+          componentId: comp.id, 
+          currentSupplierId: comp.currentSupplierId 
+        });
+        
+        const rawAlts = altResult.records.map(r => ({
+          id: r.get('id'),
+          name: r.get('name'),
+          riskRating: r.get('riskRating'),
+          country: r.get('country'),
+          price: r.get('price').toNumber ? r.get('price').toNumber() : r.get('price'),
+          leadTimeDays: r.get('leadTimeDays').toNumber ? r.get('leadTimeDays').toNumber() : r.get('leadTimeDays'),
+          capacity: r.get('capacity').toNumber ? r.get('capacity').toNumber() : r.get('capacity')
+        }));
+        
+        const scoredAlts = scoreAlternatives(rawAlts, reqVol);
+        
+        alternativesData.push({
+          componentId: comp.id,
+          componentName: comp.name,
+          requiredMonthlyVolume: reqVol,
+          alternatives: scoredAlts
+        });
+      }
     }
 
     res.json({
       disruption: { type, id, name },
       metrics: {
         affectedComponents: affectedComponentsList.length,
-        affectedProducts: dbProducts.length,
+        affectedProducts: uniqueProducts.length,
         affectedFacilities: affectedFacilitiesCount + (type === 'FACILITY' ? 1 : 0),
-        highRiskFacilities: highRiskFacilitiesCount + (type === 'FACILITY' && riskSeverity === 'HIGH' ? 1 : 0), // Adjust if facility itself is high risk
+        highRiskFacilities: highRiskFacilitiesCount + (type === 'FACILITY' && riskSeverity === 'HIGH' ? 1 : 0),
         monthlyRevenueAtRisk,
         riskSeverity
       },
-      products: dbProducts,
+      products: uniqueProducts,
       affectedComponents: affectedComponentsList,
       alternatives: alternativesData
     });
@@ -424,11 +428,13 @@ app.get('/api/graph/product/:sku', async (req, res) => {
               : `ID: ${end.properties.id}<br>Category: ${end.properties.category}<br>Cost: $${end.properties.cost}`
           });
 
-          const edgeId = `${rel.elementId || rel.identity.toString()}`;
+          const fromId = start.properties.id;
+          const toId = end.properties.id || end.properties.sku;
+          const edgeId = `used_in_${fromId}_${toId}`;
           edgesMap.set(edgeId, {
             id: edgeId,
-            from: start.properties.id,
-            to: end.properties.id || end.properties.sku,
+            from: fromId,
+            to: toId,
             label: `USED_IN (${rel.properties.quantity})`,
             title: `Quantity: ${rel.properties.quantity}`
           });
@@ -541,11 +547,11 @@ app.get('/api/graph/disruption/:type/:id', async (req, res) => {
 
       if (path) {
         path.segments.forEach(seg => {
-          affectedNodeIds.add(seg.start.properties.id);
-          affectedNodeIds.add(seg.end.properties.id || seg.end.properties.sku);
-          
-          const rel = seg.relationship;
-          affectedEdgeIds.add(`${rel.elementId || rel.identity.toString()}`);
+          const fromId = seg.start.properties.id;
+          const toId = seg.end.properties.id || seg.end.properties.sku;
+          affectedNodeIds.add(fromId);
+          affectedNodeIds.add(toId);
+          affectedEdgeIds.add(`used_in_${fromId}_${toId}`);
         });
       }
     });

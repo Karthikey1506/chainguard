@@ -414,10 +414,13 @@ function renderSimulationResult(data) {
   altContainer.innerHTML = '';
 
   if (data.alternatives.length === 0) {
+    const message = data.disruption.type === 'FACILITY'
+      ? 'Alternative recommendations are generated for Supplier disruptions. For Facility shutdowns, trace the affected path in the Graph Explorer to identify components and evaluate their primary suppliers.'
+      : 'No alternative suppliers found in graph records. Ensure other suppliers supply this component in your seed database.';
     altContainer.innerHTML = `
-      <div class="text-center py-12 text-gray-500 text-sm">
-        <i class="fa-solid fa-circle-xmark text-2xl text-gray-700 mb-2 block"></i>
-        No alternative suppliers found in graph records. Ensure other suppliers supply this component in your seed database.
+      <div class="text-center py-12 text-gray-500 text-sm col-span-1 md:col-span-2">
+        <i class="fa-solid fa-circle-info text-2xl text-gray-700 mb-2 block"></i>
+        ${message}
       </div>
     `;
   } else {

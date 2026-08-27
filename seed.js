@@ -1,11 +1,17 @@
 const neo4j = require('neo4j-driver');
 require('dotenv').config();
 
-const uri = process.env.COGNODB_URI || 'bolt+s://localhost:7687';
-const username = process.env.COGNODB_USERNAME || 'cognodb';
-const password = process.env.COGNODB_PASSWORD || 'password';
+const { COGNODB_URI, COGNODB_USERNAME, COGNODB_PASSWORD } = process.env;
 
-console.log(`Connecting to CognoDB at: ${uri}`);
+if (!COGNODB_URI || !COGNODB_USERNAME || !COGNODB_PASSWORD) {
+  throw new Error('Missing CognoDB environment variables in .env file');
+}
+
+const uri = COGNODB_URI;
+const username = COGNODB_USERNAME;
+const password = COGNODB_PASSWORD;
+
+console.log('Connecting to CognoDB...');
 
 const driver = neo4j.driver(uri, neo4j.auth.basic(username, password));
 
@@ -15,6 +21,13 @@ const runSeed = async () => {
     console.log('Clearing database...');
     await session.run('MATCH (n) DETACH DELETE n');
     console.log('Database cleared.');
+
+    console.log('Creating constraints...');
+    await session.run('CREATE CONSTRAINT product_sku IF NOT EXISTS FOR (p:Product) REQUIRE p.sku IS UNIQUE');
+    await session.run('CREATE CONSTRAINT component_id IF NOT EXISTS FOR (c:Component) REQUIRE c.id IS UNIQUE');
+    await session.run('CREATE CONSTRAINT supplier_id IF NOT EXISTS FOR (s:Supplier) REQUIRE s.id IS UNIQUE');
+    await session.run('CREATE CONSTRAINT facility_id IF NOT EXISTS FOR (f:Facility) REQUIRE f.id IS UNIQUE');
+    console.log('Constraints created.');
 
     console.log('Inserting nodes (Products, Components, Suppliers, Facilities)...');
     

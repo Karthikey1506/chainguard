@@ -251,6 +251,9 @@ PORT=3001
 ### Installation
 Run the dependency installer:
 ```powershell
+# Navigate into the project folder
+cd chainguard
+
 # Using the pre-packaged Node environment in the parent folder
 ..\.node\npm.cmd install
 ```

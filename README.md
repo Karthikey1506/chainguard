@@ -286,7 +286,7 @@ Open `http://localhost:3001` in your browser.
 
 ## 9. UI
 
-*   **Dashboard:** Highlights summary cards and features a "Risk Monitor" tracking high-risk vendors and plants.
+*   **Dashboard:** Highlights summary cards and features a "Risk Monitor" tracking high-risk suppliers and facilities.
 *   **Disruption Simulator:** Selects a supplier or facility to simulate shutdown, calculates financial revenue-at-risk, and lists ranked alternative suppliers.
 *   **BOM Explorer:** Multi-level tree showing nested components, intermediate path quantifiers, and primary suppliers.
 *   **Suppliers:** Full registry of suppliers, risk ratings, and quick simulation shortcuts.

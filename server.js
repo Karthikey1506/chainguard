@@ -42,7 +42,10 @@ app.get('/api/db-status', async (req, res) => {
     await driver.verifyConnectivity();
     res.json({ status: 'connected' });
   } catch (err) {
-    res.status(500).json({ status: 'disconnected', error: err.message });
+    res.status(503).json({
+      status: 'disconnected',
+      error: 'Database unavailable'
+    });
   }
 });
 

@@ -326,7 +326,7 @@ Open `http://localhost:3001` in your browser.
 *   **CognoDB Status:** *[Active and running]*
 
 ### Repository
-*   **GitHub Repository:** *[Insert your repository link here]*
+*   **GitHub Repository:** [github.com/Karthikey1506/chainguard](https://github.com/Karthikey1506/chainguard)
 
 ### Recording
 *   **Screen Recording Link:** *[Insert link to the video/screen-recording demonstrating the flows]*

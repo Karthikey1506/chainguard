@@ -123,12 +123,15 @@ ORDER BY depth ASC
 ```
 
 ### Supplier Disruption
-Traces cascading failures from a disrupted supplier downstream through all assemblies to final products, calculating individual revenue impacts:
+Traces cascading failures from a disrupted supplier downstream through all assemblies to final products, calculating individual revenue impacts and collecting all affected component names along the path:
 ```cypher
 MATCH (s:Supplier {id: $supplierId})
 MATCH (s)-[:SUPPLIES]->(c:Component)
 MATCH path = (c)-[:USED_IN*0..5]->(p:Product)
-WITH p, collect(distinct c.name) as affectedComponents, min(length(path)) as pathDepth
+WITH p, min(length(path)) as pathDepth, collect(distinct [n IN nodes(path) WHERE n:Component | n.name]) as componentGroups
+UNWIND componentGroups as group
+UNWIND group as componentName
+WITH p, pathDepth, collect(distinct componentName) as affectedComponents
 RETURN 
     p.sku as sku, 
     p.name as name, 
@@ -141,12 +144,15 @@ ORDER BY monthlyRevenueAtRisk DESC
 ```
 
 ### Facility Disruption
-Traces failures downstream originating from a plant shutdown:
+Traces failures downstream originating from a plant shutdown, capturing all affected component names along the paths:
 ```cypher
 MATCH (f:Facility {id: $facilityId})
 MATCH (c:Component)-[:PRODUCED_AT]->(f)
 MATCH path = (c)-[:USED_IN*0..5]->(p:Product)
-WITH p, collect(distinct c.name) as affectedComponents, min(length(path)) as pathDepth
+WITH p, min(length(path)) as pathDepth, collect(distinct [n IN nodes(path) WHERE n:Component | n.name]) as componentGroups, f
+UNWIND componentGroups as group
+UNWIND group as componentName
+WITH p, pathDepth, collect(distinct componentName) as affectedComponents, f
 RETURN 
     p.sku as sku, 
     p.name as name, 
